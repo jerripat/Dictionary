@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dictionary Search</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #e3e4f1;
+      color: #333;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .search-field {
+      padding: 10px;
+      font-size: 18px;
+      width: 300px;
+      border-radius: 5px;
+      border: 1px solid #444;
+      outline: none;
+    }
+
+    .result {
+      margin-top: 30px;
+    }
+
+    .pills {
+      display: inline-block;
+      margin: 5px;
+      padding: 6px 10px;
+      border-radius: 20px;
+      background: #6069db;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    audio {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Dictionary Lookup</h1>
+  <input
+    type="text"
+    class="search-field"
+    placeholder="Type a word and press Enter"
+    onkeypress="handle(event)"
+  />
+
+  <div class="result">
+    <h2 class="word"></h2>
+    <p class="phonetics"></p>
+    <audio controls></audio>
+    <p class="word-definition"></p>
+    <div class="synonyms"></div>
+  </div>
+
+  <script>
+    function handle(event) {
+      if (event.key === "Enter") {
+        const word = event.target.value.trim();
+        if (word) {
+          searchWord(word);
+        }
+      }
+    }
+
+    async function searchWord(word) {
+      const apiURL = `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`;
+
+      try {
+        const response = await fetch(apiURL);
+        if (!response.ok) throw new Error("Word not found");
+
+        const data = await response.json();
+        const entry = data[0];
+
+        document.querySelector('.word').textContent = entry.word;
+        document.querySelector('.phonetics').textContent = entry.phonetics[0]?.text || 'Phonetics unavailable';
+        document.querySelector('audio').src = entry.phonetics[0]?.audio || '';
+
+        const definition = entry.meanings[0]?.definitions[0]?.definition || 'Definition not found.';
+        document.querySelector('.word-definition').textContent = definition;
+
+        const allSynonyms = new Set();
+        entry.meanings.forEach(meaning => {
+          meaning.definitions.forEach(def => {
+            if (def.synonyms && def.synonyms.length > 0) {
+              def.synonyms.forEach(syn => allSynonyms.add(syn));
+            }
+          });
+        });
+
+        const synonymList = Array.from(allSynonyms);
+        const synonymsContainer = document.querySelector('.synonyms');
+        synonymsContainer.innerHTML = '';
+
+        if (synonymList.length > 0) {
+          synonymList.forEach(syn => {
+            const span = document.createElement('span');
+            span.className = 'pills';
+            span.textContent = syn;
+            synonymsContainer.appendChild(span);
+          });
+        } else {
+          synonymsContainer.textContent = 'No synonyms found.';
+        }
+
+      } catch (error) {
+        document.querySelector('.word').textContent = word;
+        document.querySelector('.phonetics').textContent = '';
+        document.querySelector('audio').src = '';
+        document.querySelector('.word-definition').textContent = 'No definition found.';
+        document.querySelector('.synonyms').textContent = '';
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>
